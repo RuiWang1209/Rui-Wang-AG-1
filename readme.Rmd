@@ -1,0 +1,57 @@
+---
+title: "readme file"
+author: "Elia Han, Rui Wang, Eric Lin, Aaron Huang"
+date: "2023-12-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+aqi_data <- read.csv("final_data/annual_aqi_by_cbsa.csv")
+aqi_yearly_data <- aqi_data %>%
+  group_by(Year) %>%
+  summarise(
+    `Days with AQI` = mean(Days.with.AQI),
+    `Good Days` = mean(Good.Days),
+    `Moderate Days` = mean(Moderate.Days),
+    `Unhealthy for Sensitive Groups Days` = mean(Unhealthy.for.Sensitive.Groups.Days),
+    `Unhealthy Days` = mean(Unhealthy.Days),
+    `Very Unhealthy Days` = mean(Very.Unhealthy.Days),
+    `Hazardous Days` = mean(Hazardous.Days),
+    `Max AQI` = mean(Max.AQI),
+    `90th Percentile AQI` = mean(X90th.Percentile.AQI),
+    `Median AQI` = mean(Median.AQI)
+  ) 
+  health_data <- read.csv("final_data/Lower_Respiratory.csv")
+health_data <- health_data %>% 
+  select(YEAR,STATE,RATE, DEATHS)
+  health_data_yearly <- health_data %>%
+  group_by(YEAR) %>%
+  summarise(
+    Avg_Rate = mean(RATE, na.rm = TRUE),
+    Total_Deaths = sum(as.numeric(DEATHS), na.rm = TRUE) 
+  )
+health_data_yearly <- rename(health_data_yearly, Year = YEAR)
+merged_data <- inner_join(aqi_yearly_data, health_data_yearly, by = "Year")
+ggplot(merged_data, aes(x = `Median AQI`, y = Avg_Rate)) +
+  geom_point() +
+  geom_smooth(method = "lm", color = "blue") +
+  labs(title = "Relationship Between Median AQI and Average Rate of Respiratory Diseases",
+       x = "Median AQI",
+       y = "Average Rate of Respiratory Diseases")
+
+```
+
+
+The topic we choose is about the relationship between respiratory disease rate and air quality data. Our purpose is investigating the relationship between common urban pollutants and respiratory diseases. This topic is interesting, because it is correlated with people’s daily life and health.  There are two datasets, one AIQ dataset and another dataset is the  respiratory disease mortality by state.
+We describe the relationship between air quality and disease through six graphs. We use two sets of data from 2014 to 2021 for comparison. In the first figure, we study the relationship between Max AQI and median AQI. In the second picture, Good and Moderate Days over Time, we studied the index of good and average air quality. In the third graph we studied Unhealthy and Hazardous Days changes over Time. The fourth graph examines changes in the Respiratory Disease Rate in each U.S. state. The fifth graph shows the trend of Respiratory Disease Rate changes in California Over Time.
+Finally, the sixth figure is the most important one. Relationship between Median AQI and Average Rate of Respiratory Disease. We used the year to emerge two datasets. The X-axis which is the median AQI and another dataset is the respiratory disease mortality by state which is the y-axis.  There is the positive correlation, which means when the median AQI increases the the average rate of respiratory increases. This result is the same as assuming that the worse air condition causes the more respiratory disease which appeals to people who protect the environment such as the target audience. There are three categories of target audience. The first one is policymakers. Policymakers will formulate some policies to help reduce exhaust emissions such as factories and advocate people to support clean engergy. For the public, people should change the way they travel, such as taking public transportation instead of private cars or even private planes. Communities can also frequently hold educational activities to protect the environment and reduce air pollution.
+
+
+

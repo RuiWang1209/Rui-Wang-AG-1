@@ -1,0 +1,295 @@
+---
+title: "final group project"
+author: "Elia Han, Rui Wang, Eric Lin, Aaron Huang"
+date: "2023-12-07"
+output: html_document
+---
+
+# Data processing and cleaning
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Importing necessary libraries
+library(dplyr)
+library(ggplot2)
+aqi_data <- read.csv("final_data/annual_aqi_by_cbsa.csv")
+print(colnames(aqi_data))
+
+# Checking for missing values in the air quality data
+print("Missing values in air quality data:")
+print(colSums(is.na(aqi_data)))
+
+# Use dplyr to group and summarize the data by Year
+aqi_yearly_data <- aqi_data %>%
+  group_by(Year) %>%
+  summarise(
+    `Days with AQI` = mean(Days.with.AQI),
+    `Good Days` = mean(Good.Days),
+    `Moderate Days` = mean(Moderate.Days),
+    `Unhealthy for Sensitive Groups Days` = mean(Unhealthy.for.Sensitive.Groups.Days),
+    `Unhealthy Days` = mean(Unhealthy.Days),
+    `Very Unhealthy Days` = mean(Very.Unhealthy.Days),
+    `Hazardous Days` = mean(Hazardous.Days),
+    `Max AQI` = mean(Max.AQI),
+    `90th Percentile AQI` = mean(X90th.Percentile.AQI),
+    `Median AQI` = mean(Median.AQI)
+  ) %>%
+  
+# Create a new continuous/numerical variable
+  mutate(Moderate_to_Good_Ratio_yearly = `Moderate Days` / `Good Days`)
+
+# Displaying the first 8 rows of the selected data
+head(aqi_yearly_data,8)
+
+# Reading health data from a CSV file
+health_data <- read.csv("final_data/Lower_Respiratory.csv")
+print(colnames(health_data))
+num_rows <- nrow(health_data)
+num_columns <- ncol(health_data)
+print(num_rows)
+print(num_columns)
+
+# Checking for missing values in the health data
+print("Missing values in health data:")
+print(colSums(is.na(health_data)))
+
+# Selecting specific columns for analysis
+health_data <- health_data %>% 
+  select(YEAR,STATE,RATE, DEATHS)
+
+# Create a new categorical variable based on the existing "RATE" variable
+health_data <- health_data %>%
+  mutate(RATE_category = ifelse(RATE > 40, "High", "Low"))
+
+# Displaying the first 8 rows of the selected data
+head(health_data,8)
+
+# Grouping health data by year and calculating average rate and total deaths
+health_data_yearly <- health_data %>%
+  group_by(YEAR) %>%
+  summarise(
+    Avg_Rate = mean(RATE, na.rm = TRUE),
+    Total_Deaths = sum(as.numeric(DEATHS), na.rm = TRUE) 
+  )
+
+# Renaming the column from YEAR to Year
+health_data_yearly <- rename(health_data_yearly, Year = YEAR)
+
+# Merging health data with air quality data based on the Year column
+merged_data <- inner_join(aqi_yearly_data, health_data_yearly, by = "Year")
+
+# Displaying the resulting health data grouped by year
+health_data_yearly
+
+# Displaying the merged data with air quality and health information
+merged_data
+
+write.csv(aqi_data, file = "final_data/cleaned_aqi.csv", row.names = FALSE)
+write.csv(health_data, file = "final_data/cleaned_health.csv", row.names = FALSE)
+write.csv(merged_data, file = "final_data/merged.csv", row.names = FALSE)
+```
+
+We begin by importing the necessary libraries, ggplot2 for plotting and dplyr for data manipulation. Then we print the column names of our dataset (aqi_data) helps us understand what variables we have at our disposal.
+
+For aqi dataset, we will firstly use the group_by and summarise functions, then we will aggregate the data by year, calculating the mean values for various air quality metrics. For health dataset, we will use select function to choose specific columns for further analysis, namely the YEAR, STATE, RATE, and DEATHS.
+
+Finally, we display the first 8 rows of our summarized data using the head function.This analysis provides us with a clearer picture of how air quality metrics have changed over the years. Such insights are crucial for making informed decisions regarding environmental policies and public health.
+
+#  Introduction 
+## Where you give the context–why is this an interesting topic?
+Poor air quality is known to contribute to various health issues, including respiratory and cardiovascular diseases. Understanding these impacts is crucial for developing effective public health strategies and policies aimed at mitigating the effects of air pollution, because the air pollutant can cause the lung disease. This project will analyze the correlation between urban air pollutants and public health metrics, aiding policymakers and health professionals in making informed decisions. And appealing to people to protect the environment and health such as the policy makers, public and the communities. Those are the target audience to improve the environment. For example, the policy makers can make the clean energy policy to restrict the industry pollutant emission. As for the public, people can change the transition habits which is changing taking the privacy car to public transportation. And the communities can advocate and educate members to support the policy. 
+
+## What do we already know about this topic? This should be based on what you read from media or literature, not on what do you do below!
+We already know about this topic about the school journey with the PM2.5. In winter in China, PM2.5 has a great impact on people’s lives. Whenever PM2.5 is very serious, schools will have holidays to allow students to study and rest at home. Every winter, various media and news will call on people to start wearing masks to protect themselves and not recommend traveling. The school will support students taking online  learning at home. Therefore, the government will restrict the travel of private cars to reduce exhaust pollution. For example, private cars are restricted going out by order of license plate numbers every day of the week. The government uses this method to improve air quality. This method can improve the air quality to a certain extent but does not expose the impact of PM2.5 on people's air. PM2.5 can cause lung diseases in humans. This topic is very important because it is closely related to people’s lives.
+
+## Explain what exactly are you doing
+Our research question is about the relationship between common urban pollutants and respiratory diseases. We used two datasets. One is the AIQ dataset which is sourced from the EPA. This dataset analyzes air quality trends over time. This dataset does not need to consider the personal information. This dataset includes a lot of variables such as states,year, max AQI, median ZQI, good days, moderate days, unhealthy and hazardous days. And another dataset is the health data. This data is respiratory disease mortality by state which is sourced by the CDC. This data is reliable because it is a survey, hospital records, and death certification. Tis data represent the respiratory rate by state. 
+There are four questions. (1) What are the trends in urban air quality over the past two decades, and how do they align with public health statistics? As we did the research the air quality does not get too worse these years because the AQI has not changed too much. (2) Which specific air pollutants have the most significant impact on public health, and to what extent? This is PM2.5. When the air quality becomes worse, the respiratory disease becomes more. (3) Can interventions in urban planning that lead to improved air quality be linked to better health outcomes? Yes！This question corresponds to the target audience. For policymakers, they will formulate some policies to limit the amount of waste gas produced by the factory. For the public, people should change their transportation methods. People should take buses more instead of private cars. Communities can educate and publicize the concepts and tips for protecting the air. (4) How do air quality problems in rapidly industrializing cities compare with developed urban areas?  Air quality in rapidly developing industrial cities is often worse than in rural areas because industries tend to emit a lot of exhaust emissions. Rural areas tend not to have as many private car trips and are less densely populated, so air pollution is not as serious. For different target audiences, everyone will take different actions to protect air quality. 
+
+## Explain why is it interesting–why should someone care? why should someone read your report?
+Studying the relationship between air quality and health is a topic that people are very concerned about, because this topic is closely related to people's lives. Poor air quality can affect people's health such as respiratory diseases, especially for vulnerable groups such as children, pregnant women, or people with a history of respiratory diseases, etc. The contagion scope of this contamination is very wide, so it is a global problem. The results and process of the research will call on people to take corresponding policies or actions to help improve air quality. Improving air quality is not only helpful to humans, but also has a significant effect on a series of organisms and the environment on the earth.
+
+# Explain your Data
+## Why do you use these datasets? Where do your datasets originate from? Who collected data?
+In our project, we want to analyze the impact of air quality on health. So we have aqi_data and health data. Start with first one, AQI dataset monitors air quality. It comes from United States Environmental Protection Agency(EPA). The word AQI shows up throughout the entire data set. Thus, we need to explain what does SQI stands for. The AQI stands for Air quality index. The higher the AQI value, the greater the level of air pollution. Generally speaking, an AQI value of 50 or below represents good air quality, while an AQI value over 100 may have health concern. This dataset has a list of variables of various pollutants, capturing the urban air fluctuations over time. And this is why we want to use this dataset since it reveals air quality yearly based in a vivid way. The health dataset, on the other hand, is a collection of public health records detailing respiratory disease rates across different geographies and times. This dataset it monitors lower respiratory diseases and it comes from Centers for Disease Control(CDC), which is also a nationally recognized institution. Just like the EPA. The reason of why we want to use this dataset is because our presumption is that air quality is somehow related to public health, especially lung diseases. Thus, lower respiratory diseases dataset could reveal the level of impact of air quality.
+
+## The data usage permissions: are the data freely available for everyone? Are there certain restrictions on who can access data, or for what purpose it can be used (e.g. non-commercial only)?
+About data usage permission: Both datasets are publicly available and provided for research purposes, which aligns with our project's objectives. Given that both are from federal agencies, they are likely to be used freely for educational and research purposes, though further verification from their terms of use would be prudent to confirm any specific restrictions.
+
+## What are the datasets about? What is the population and what is the sample? Discuss any data quality issues you encountered
+Now we know what our dataset is about, then we can talk about data quality and the methodology of collecting data. For both datasets, as we check are there any missing, non-plausible values, or other quality issues in the relevant variables. We find that there are no missing values in this dataset, indicating really good data quality. We believe that is due to how they collect data and strict standards. EPA collects air quality data from thousands of monitoring stations operated by states, tribes, local agencies, and other organizations. It undergoes quality assurance procedures and is widely used in scientific research, which speaks to its reliability. Thus, the population and sample of aqi data covers various urban areas (CBSAs) over a certain year, representing the population living in these areas. For CDC, it gathered through surveys, hospital records, and death certificates and it has a strict governmental standards when collecting data, ensuring high data quality and reliability. Thus, the population would include all individuals within the United States who have experienced lower respiratory diseases. This encompasses all demographics, regions, and communities, regardless of whether they have been diagnosed or recorded. And the sample in this case would be the records.
+
+## What do rows represent in your final dataset?
+Our final dataset is merged dataset, which merged health data and aqi data.
+Each row in our final dataset represents AQI value in America and the corresponding rate of respiratory diseasesin a specific year*
+
+## How many observations do you have?
+
+```{r}
+num_rows <- nrow(merged_data)
+print(num_rows)
+```
+We have 8 observation in our dataset*
+
+## What are the relevant variables and how are they coded?
+```{r}
+print(colnames(merged_data))
+```
+
+Relevant variables can be split into three part, including Year, all kinds of AQI values and all kinds of number of days air quality, and total death. These are coded as numerical values*
+
+## Are there any missings, non-plausible values, or other quality issues in the relevant variables? How many?
+```{r}
+print(colSums(is.na(merged_data)))
+```
+
+There is no missing or non-plausible values within the relevant variables, underscoring the reliability of our data sources and the viability of our dataset for robust statistical analysis.*
+
+
+# Discuss your methods
+## Which variables did you include, why?
+We choose two datasets: the aqi dataset and the health dataset
+For the aqi dataset, we include variables Year<int>,Days with AQI<dbl>,Good Days<dbl>,Moderate Days<dbl>,Unhealthy for Sensitive Groups Days<dbl>,Unhealthy Days<dbl>,Very Unhealthy Days<dbl>Unhealthy Days<dbl>Very Unhealthy Days<dbl>
+Hazardous Days<dbl>Max AQI<dbl>90th Percentile AQI<dbl>Median AQI<dbl>Moderate_to_Good_Ratio_yearly <dbl>, and choose to use summarize function to group and summarize the variables `Days with AQI`,`Good Days,` `Moderate Days`, `Unhealthy for Sensitive Groups Days`, `Unhealthy Days`, `Very Unhealthy Days`, `Hazardous Days`, `Max AQI`, `90th Percentile AQI`, `Median AQI` by Year and calculate the mean values for various air quality metrics, which can help us get the new variables from those variables. We include those variables because they provide a comprehensive overview of air quality conditions. We create a new continuous/numerical variable, Moderate_to_Good_Ratio_yearly, which represents a ratio between Moderate and Good Days, offering insights into the balance between moderate and good days.
+
+For the health dataset, we use a select function to choose specific columns for further analysis, namely the YEAR, STATE, RATE, and DEATHS. We include these variables because they can help us determine the number and proportion of people suffering from respiratory disease in different states each year. Then, we group health data by Year and calculate the average rate and total deaths. And we rename the column from YEAR to Year, which helps us merge two datasets by Year. A new categorical variable, RATE_category, is created based on whether the respiratory disease rate is high or low, offering us a clear and direct understanding of the degree of respiratory disease rate.
+
+For the merged dataset, we merge health data with air quality data based on the Year column, including variables in both datasets.
+
+## How did you process your data, why?
+Grouping and Summarizing:
+The air quality data is grouped by year (group_by(Year)) using the dplyr package. Then, we use the summarize function to calculate the mean values for various air quality variables for each year.
+In the health data, the mutate function creates a new categorical variable based on the existing rate.
+Missing values checking:
+We use the colSums(is. na()) function to check whether our datasets have missing values. Through checking, there are no missing values in our datasets.
+
+## How did you select your sample?
+We filter the health data for the year 2021 (health_data_2021) and for the state of California (health_data_CA). The rationale for choosing 2021 could be to focus on recent data, while the selection of California allows for a more localized analysis.
+
+## Any technical decisions you did, such as either to remove missings, or replace missing values with another one?
+We merge air quality and health data based on the common "Year" column using the inner_join function. This decision is reasonable as it aligns the datasets for a combined analysis of air quality and respiratory health. We also checked for missing values for both of the datasets and did not see any missing values in our datasets.
+
+## If you use more complex statistical methods, such as regression, these should also discussed here. These questions should discuss trade-offs you face with such decisions.
+We create a scatter plot with a linear regression line to explore the relationship between the median AQI and the average rate of respiratory diseases. This method allows for the examination of potential correlations. We create a scatterplot with a linear regression line to visualize the relationship between the air quality index and Respiratory Disease Rate. To define the relationship, we choose to compare the average median air quality index to the average respiratory disease rate by year. We also add a linear regression line to the plot using the least squares method to fit the line. The line is colored blue. In this case, the least squares method stands for linear model. The linear model method fits a straight line to the data points, showing the overall trend. Through this plot, we can find that there is a positive correlation between median AQI and average disease rate.
+
+
+## Talk about your results
+Our comprehensive study delved into the intricate relationship between urban air quality, as measured by the Air Quality Index (AQI), and public health outcomes, particularly respiratory diseases. Our methodology involved thoroughly analyzing AQI and health data, employing techniques to aggregate, summarize, and visualize complex datasets. This approach allowed us to construct a detailed picture of the impact of air pollution across various time frames and geographical regions, offering a broad perspective on urban environmental health.
+
+```{r}
+# Create a line plot with years on the x-axis and Max AQI and Median AQI on the y-axis
+ggplot(aqi_yearly_data, aes(x = Year)) +
+   # Add a line for Max AQI, colored in red
+  geom_line(aes(y = `Max AQI`, color = "Max AQI"), size = 1) +
+  # Add a line for Median AQI, colored in green
+  geom_line(aes(y = `Median AQI`, color = "Median AQI"), size = 1) +
+  # Set the title and axis labels for the plot
+  labs(title = "Max and Median AQI over Time", x = "Year", y = "AQI") +
+   # Manually set colors, with Max AQI in red and Median AQI in green
+  scale_color_manual(values = c("Max AQI" = "red", "Median AQI" = "green"))
+```
+
+Our analysis featured a series of line graphs that traced the Max AQI and Median AQI from 2014 to 2021, revealing significant and telling fluctuations in air quality over these years. These fluctuations were crucial in highlighting specific periods where air quality reached notably poor levels, as indicated by peaks in Max AQI. Understanding these peaks was essential for establishing a correlation between periods of high air pollution and adverse health outcomes. Additionally, we compiled tables summarizing the AQI data year by year, categorizing days into different AQI levels such as Good, Moderate, and various grades of Unhealthy. We observed an increase in Unhealthy Days, signaling a worrying trend of deteriorating air quality over time and its potential implications for public health.
+
+```{r}
+# Create a line plot with years on the x-axis and the number of Good Days and Moderate Days on the y-axis
+ggplot(aqi_yearly_data, aes(x = Year)) +
+  # Add a line for the number of Good Days, colored in blue
+  geom_line(aes(y = `Good Days`, color = "Good Days"), size = 1) +
+  # Add a line for the number of Moderate Days, colored in yellow
+  geom_line(aes(y = `Moderate Days`, color = "Moderate Days"), size = 1) +
+   # Set the title and axis labels for the plot
+  labs(title = "Good and Moderate Days over Time", x = "Year", y = "Number of Days") +
+  # Manually set colors, with Good Days in blue and Moderate Days in yellow
+  scale_color_manual(values = c("Good Days" = "blue", "Moderate Days" = "yellow"))
+```
+
+This plot is about Unhealthy and Hazardous Days over Time. We added Four geom_line layers, each representing a different category of Air Quality Index days, which help us directly know the trend of different types of days in aqi dataset. In this case, we can find that all of those types of days are pretty few, which mitigated the impact on our study.
+
+```{r}
+# Create a line plot with years on the x-axis and the number of different AQI categories on the y-axis
+ggplot(aqi_yearly_data, aes(x = Year)) +
+  # Add a line for Unhealthy for Sensitive Groups Days, colored in purple
+  geom_line(aes(y = `Unhealthy for Sensitive Groups Days`, color = "Unhealthy for Sensitive Groups Days"), size = 1) +
+  # Add a line for Unhealthy Days, colored in orange
+  geom_line(aes(y = `Unhealthy Days`, color = "Unhealthy Days"), size = 1) +
+  # Add a line for Very Unhealthy Days, colored in pink
+  geom_line(aes(y = `Very Unhealthy Days`, color = "Very Unhealthy Days"), size = 1) +
+    # Add a line for Hazardous Days, colored in gray
+  geom_line(aes(y = `Hazardous Days`, color = "Hazardous Days"), size = 1) +
+  # Set the title and axis labels for the plot
+  labs(title = "Unhealthy and Hazardous Days over Time", x = "Year", y = "Number of Days") +
+  # Manually set colors for each category
+  scale_color_manual(values = c("Unhealthy for Sensitive Groups Days" = "purple", 
+                                "Unhealthy Days" = "orange", 
+                                "Very Unhealthy Days" = "pink", 
+                                "Hazardous Days" = "gray"))
+```
+
+A significant aspect of our study was the state-specific analysis for 2021, where we employed a chart to illustrate the respiratory disease rates across different states. This visualization clearly showed stark variations in health outcomes, with states experiencing higher pollution levels often recording more elevated rates of respiratory diseases. This analysis was pivotal in understanding how air quality impacts health at a localized level. It highlighted the necessity of region-specific air quality management strategies.
+
+```{r}
+# Filtering health data for the year 2021
+health_data_2021 <- health_data[health_data$YEAR == 2021, ]
+# Creating a bar plot using ggplot2
+ggplot(health_data_2021, aes(x = reorder(STATE, -RATE), y = RATE)) +
+  geom_bar(stat = "identity", fill = "blue") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Respiratory Disease Rate by State in 2021", x = "State", y = "Rate")
+```
+
+In exploring regional differences, we delved into the reasons behind varying respiratory health outcomes across states, considering factors like industrialization, population density, and environmental policies. Particularly notable was our analysis of California, where we used line graphs and point plots to track the trend of respiratory diseases over several years. This provided valuable longitudinal insights into how fluctuating air quality levels impact health in one of the most populous and industrially diverse states. Furthermore, the study included a discussion on the influence of state-level policies and environmental factors on health trends in California, offering a nuanced understanding of how policy interventions can shape public health outcomes in the context of air quality.
+
+```{r}
+# Filtering health data for California
+health_data_CA <- health_data[health_data$STATE == "CA", ]
+# Create a line plot with years on the x-axis and respiratory disease rates in California on the y-axis
+ggplot(health_data_CA, aes(x = YEAR, y = RATE)) +
+  # Add a line for the trend, colored in red
+  geom_line(color = "red") +
+  # Add points on the line, colored in red
+  geom_point(color = "red") +
+  # Set the title and axis labels for the plot
+  labs(title = "Trend of Respiratory Disease Rate in California Over Time", x = "Year", y = "Rate")
+```
+
+In conclusion, our data presented a compelling narrative of the direct impact of air quality on public health. There was a clear correlation between periods of median AQI and average rates of respiratory diseases. This relationship is held across different temporal and geographical scales. The geographical variations in respiratory disease rates across states and the temporal patterns observed, particularly the year-over-year trends in AQI and health data, indicate that worsening air quality over time is likely contributing to a decline in respiratory health. This trend underscores the urgent need for proactive measures to combat urban air pollution and safeguard 
+
+```{r}
+# Create a scatter plot with a linear regression line
+ggplot(merged_data, aes(x = `Median AQI`, y = Avg_Rate)) +
+  # Add points to the plot
+  geom_point() +
+  # Add a linear regression line
+  geom_smooth(method = "lm", color = "blue") +
+  # Set the title and axis labels for the plot
+  labs(title = "Relationship Between Median AQI and Average Rate of Respiratory Diseases",
+       x = "Median AQI",
+       y = "Average Rate of Respiratory Diseases")
+```
+
+## What does data tell you?
+The data provides compelling evidence of the direct impact of air quality on public health. There is a clear correlation between periods of high AQI and increased rates of respiratory diseases, evident across different temporal and geographical scales.
+Geographical variations in respiratory disease rates across states point to the influence of local air quality, industrialization levels, and policy effectiveness.
+Moreover, the temporal patterns, especially the year-over-year trends in AQI and health data, indicate that worsening air quality over time is likely contributing to deteriorating respiratory health. This trend calls for urgent action to address urban air pollution.
+
+# Discuss your findings
+## what do the results tell you regarding of your question you asked in introduction, or about the story line you want to focus on?
+The results directly respond to the research question posed at the study's outset: the relationship between urban air quality and public health. The findings underscore the critical impact of air pollution on respiratory health, aligning with the initial hypothesis and narrative of the study. This statistical connection tells how environmental factors deeply intertwine with human health, particularly in urban settings. 
+The analysis reveals a clear correlation between periods of high AQI and increased rates of respiratory diseases. This relationship is evident across different temporal and geographical scales, underscoring the widespread impact of air pollution. The variations in respiratory disease rates across states point to the influence of local air quality, industrialization levels, and policy effectiveness. This suggests that localized strategies may be necessary to combat the health impacts of air pollution. 
+The temporal analysis, especially the year-over-year trends in AQI and health data, indicates that worsening air quality over time likely contributes to deteriorating respiratory health. This alarming trend calls for urgent action to address urban air pollution.
+
+## What are the limitations–how far do you think you can extend your claims or story?
+While providing insightful findings on the impact of urban air quality on public health, the study has. A significant constraint is its focus on establishing correlation rather than causality. This limitation means that while the survey successfully identifies a relationship between high AQI and increased respiratory diseases, it cannot definitively prove that poor air quality causes these health issues. Factors such as lifestyle choices, genetics, and other environmental variables also play influential roles. Still, they need to be accounted for in this analysis. 
+Additionally, the study's scope, predominantly centered on urban areas within the United States, restricts its generalizability. The findings might not directly apply to global contexts where environmental, economic, and societal conditions vary. Furthermore, the data up to 2021 must include more recent developments in air quality management or public health strategies. These limitations suggest that while the study offers valuable insights, its claims and narrative should be interpreted cautiously, particularly when considering broader applications or different geographical contexts.
+
+## Give directions for future work–what analysis/data might you need to extend your story further?
+Looking to the future, this study opens up multiple avenues for further research to expand and enhance our understanding of the relationship between urban air quality and public health. A key area for expansion is broadening the geographic scope of the research to include rural areas and different countries. This broader inclusion would offer a more comprehensive global perspective on the impacts of air pollution on health across diverse environmental and socioeconomic contexts. 
+Additionally, there is a crucial need for longitudinal studies that can track individual health outcomes over time about changing air quality. Such studies are vital for establishing causal links and understanding the long-term effects of air pollution on public health. Another important direction is the integration of additional variables, such as socioeconomic status and lifestyle choices, to account for potential confounding factors. This would provide a more nuanced analysis of the complex factors influencing health outcomes about air quality. Furthermore, analyzing the effectiveness of various air quality control policies could yield valuable insights for policymakers and public health officials, aiding in formulating effective strategies to improve health outcomes. 
+Lastly, employing advanced data collection methods for more accurate and granular data on air quality and health would significantly enhance the quality and reliability of future research, leading to more precise and comprehensive findings.
+
+## At the end, it should include a summary with a takeaway message. 
+In our extensive study on the impact of urban air quality on public health, with a particular focus on respiratory diseases, we've gained critical insights from analyzing air quality data from 2014 to 2021 and corresponding health data. Our findings reveal a robust correlation between high Air Quality Index (AQI) levels and increased rates of respiratory diseases, highlighting a significant health impact across various years and regions. This relationship, consistent in different geographical areas, underscores the pervasive effect of urban air pollution on public health. Despite these insights, our study faces limitations, particularly in establishing direct causality and its generalizability beyond the U.S. urban context. 
+We recommend expanding the geographical scope of the research, incorporating longitudinal studies to establish causality, and including broader socioeconomic variables to deepen our understanding. The urgent need for effective air quality management in urban areas is a clear takeaway from our study. This research demonstrates the critical link between environmental conditions and public health. It emphasizes the necessity of proactive policy interventions and strategies to improve air quality. It is a call to action for policymakers, urban planners, and the public to prioritize environmental health as an integral component of public well-being.
